@@ -6,23 +6,23 @@ The core goal is to provide real-time, data-driven traffic analysis to inform dy
 
 ✨ Features
 
-Dynamic Congestion Scoring: Calculates a real-time, frame-by-frame congestion score based on vehicles present in a user-defined zone.
+- **Dynamic Congestion Scoring:** Calculates a real-time, frame-by-frame congestion score based on vehicles present in a user-defined zone.
 
-Weighted Scoring: Large vehicles (truck, bus, car) contribute 3 points to the score, while small vehicles (motorcycle) contribute 1 point, prioritizing heavier traffic flow.
+- **Weighted Scoring:** Large vehicles (truck, bus, car) contribute 3 points to the score, while small vehicles (motorcycle) contribute 1 point, prioritizing heavier traffic flow.
 
-YOLOv10 Integration: Uses the ultra-fast and accurate YOLOv10 model (user-selectable model size: Nano, Small, Medium, Large) for state-of-the-art object detection.
+- **YOLOv10 Integration:** Uses the ultra-fast and accurate YOLOv10 model (user-selectable model size: Nano, Small, Medium, Large) for state-of-the-art object detection.
 
-Optimized Performance: Implements Region-of-Interest (ROI) Cropping to run detection only on the relevant area of the frame, significantly boosting FPS and processing speed.
+- **Optimized Performance:** Implements Region-of-Interest (ROI) Cropping to run detection only on the relevant area of the frame, significantly boosting FPS and processing speed.
 
-Robust Tracking: Utilizes a highly stable Centroid Tracker with optimized parameters to maintain consistent ID labels for vehicles, even during brief occlusions.
+- **Robust Tracking:** Utilizes a highly stable Centroid Tracker with optimized parameters to maintain consistent ID labels for vehicles, even during brief occlusions.
 
-Graphical Setup: Features a friendly Tkinter GUI for initial setup:
+- **Graphical Setup:** Features a friendly Tkinter GUI for initial setup:
 
-Selects the desired YOLO model size (speed vs. accuracy trade-off).
+  - Selects the desired YOLO model size (speed vs. accuracy trade-off).
 
-Allows input of local video files, images, or live HLS/RTSP stream URLs.
+  - Allows input of local video files, images, or live HLS/RTSP stream URLs.
 
-Interactive ROI Selection: Users can visually click four points on the first frame to define the custom analysis zone.
+- **Interactive ROI Selection:** Users can visually click four points on the first frame to define the custom analysis zone.
 
 🛠️ Installation and Setup
 
