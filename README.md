@@ -8,7 +8,7 @@ The core goal is to provide real-time, data-driven traffic analysis to inform dy
 
 - **Dynamic Congestion Scoring:** Calculates a real-time, frame-by-frame congestion score based on vehicles present in a user-defined zone.
 
-- **Weighted Scoring:** Large vehicles (truck, bus, car) contribute 3 points to the score, while small vehicles (motorcycle) contribute 1 point, prioritizing heavier traffic flow.
+  - **Weighted Scoring:** Large vehicles (truck, bus, car) contribute 3 points to the score, while small vehicles (motorcycle) contribute 1 point, prioritizing heavier traffic flow.
 
 - **YOLOv10 Integration:** Uses the ultra-fast and accurate YOLOv10 model (user-selectable model size: Nano, Small, Medium, Large) for state-of-the-art object detection.
 
