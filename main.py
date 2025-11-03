@@ -3,8 +3,8 @@ import numpy as np
 from LaneAnalyzer import LaneAnalyzer
 import time
 import os
-import tkinter as tk # Import tkinter
-from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk, filedialog # Import filedialog
 
 # --- MODEL CONFIGURATION ---
 MODEL_OPTIONS = {
@@ -17,8 +17,8 @@ MODEL_OPTIONS = {
 DEFAULT_MODEL_PATH = "yolov10n.pt" 
 # --- END MODEL CONFIGURATION ---
 
-# MODEL_PATH will be set by the Tkinter window
-VIDEO_PATH = "test.mp4"
+# These variables are no longer global constants, they will be set by the GUI.
+# VIDEO_PATH = "test.mp4" 
 ROI_WINDOW_NAME = "Select Congestion Zone"
 
 MAX_DISAPPEARED = 60
@@ -28,47 +28,78 @@ roi_points = []
 display_frame = None
 original_frame = None
 
-def get_model_choice():
-    """Opens a Tkinter window to let the user select the YOLO model."""
+def get_initial_setup_data():
+    """Opens a Tkinter window to let the user select the model and video path."""
     
-    # Store the user's choice
-    chosen_model_file = [DEFAULT_MODEL_PATH]
+    # Store the results [model_path, video_path]
+    setup_data = [DEFAULT_MODEL_PATH, "test.mp4"] 
+
+    def select_file():
+        # Open standard file dialog to choose a video/image file
+        filepath = filedialog.askopenfilename(
+            title="Select Video or Image File",
+            filetypes=[
+                ("Video Files", "*.mp4 *.avi *.mov"),
+                ("Image Files", "*.jpg *.png *.jpeg"),
+                ("All Files", "*.*")
+            ]
+        )
+        if filepath:
+            video_path_entry.delete(0, tk.END) # Clear current entry
+            video_path_entry.insert(0, filepath) # Insert selected path
 
     def select_and_close():
-        # Get the friendly name from the combobox
+        # Get the file path from the entry box
+        setup_data[1] = video_path_entry.get()
+        
+        # Get the model path
         selected_key = model_combo.get()
-        # Look up the corresponding file path
-        chosen_model_file[0] = MODEL_OPTIONS.get(selected_key, DEFAULT_MODEL_PATH)
+        setup_data[0] = MODEL_OPTIONS.get(selected_key, DEFAULT_MODEL_PATH)
+        
         root.destroy()
 
     root = tk.Tk()
-    root.title("YOLO Model Selector")
+    root.title("Traffic Analyzer Setup")
     
-    # Center the window (optional, but nice)
-    window_width = 350
-    window_height = 120
+    # Setup window size and centering
+    window_width = 450
+    window_height = 200
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     center_x = int(screen_width/2 - window_width/2)
     center_y = int(screen_height/2 - window_height/2)
     root.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
+    root.resizable(False, False) # Prevent resizing
+
+    # --- Model Selection Section ---
+    label_model = ttk.Label(root, text="1. Choose YOLOv10 Model:")
+    label_model.pack(pady=5)
+
+    model_combo = ttk.Combobox(root, values=list(MODEL_OPTIONS.keys()), state="readonly", width=45)
+    model_combo.set(list(MODEL_OPTIONS.keys())[0])
+    model_combo.pack(pady=2)
+
+    # --- Video Path Section ---
+    label_video = ttk.Label(root, text="2. Enter Video Path or Stream URL:")
+    label_video.pack(pady=5)
+
+    path_frame = ttk.Frame(root)
+    path_frame.pack(padx=10)
+
+    video_path_entry = ttk.Entry(path_frame, width=40)
+    video_path_entry.insert(0, setup_data[1]) # Default value
+    video_path_entry.pack(side=tk.LEFT, padx=5)
     
-    # Label
-    label = ttk.Label(root, text="Choose a YOLOv10 Model:")
-    label.pack(pady=10)
+    browse_button = ttk.Button(path_frame, text="Browse...", command=select_file)
+    browse_button.pack(side=tk.LEFT, padx=5)
 
-    # Combobox (Dropdown)
-    model_combo = ttk.Combobox(root, values=list(MODEL_OPTIONS.keys()), state="readonly", width=35)
-    model_combo.set(list(MODEL_OPTIONS.keys())[0]) # Set default selection
-    model_combo.pack(pady=5)
-
-    # Button
+    # --- Start Button ---
     select_button = ttk.Button(root, text="Start Analysis", command=select_and_close)
     select_button.pack(pady=10)
 
     root.mainloop()
     
-    return chosen_model_file[0]
+    return setup_data[0], setup_data[1]
 
 
 def draw_roi(frame, points):
@@ -150,16 +181,20 @@ def select_roi(first_frame):
 
 def main():
     
-    # 1. --- MODEL SELECTION (NEW) ---
-    chosen_model_path = get_model_choice()
+    # 1. --- INITIAL SETUP (NEW) ---
+    chosen_model_path, video_path_input = get_initial_setup_data()
     MODEL_PATH = chosen_model_path
+    VIDEO_PATH = video_path_input
     print(f"Using model: {MODEL_PATH}")
+    print(f"Source path: {VIDEO_PATH}")
     # ---------------------------------
     
     image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
     is_image = False
+    
+    # Determine if input is a local image file
     if isinstance(VIDEO_PATH, str) and not VIDEO_PATH.startswith('http') and not VIDEO_PATH.startswith('rtsp'):
-        if os.path.splitext(VIDEO_PATH)[1].lower() in image_extensions:
+        if os.path.exists(VIDEO_PATH) and os.path.splitext(VIDEO_PATH)[1].lower() in image_extensions:
             is_image = True
 
     if is_image:
@@ -172,7 +207,7 @@ def main():
         ret = True
         
     else:
-        print(f"Connecting to video stream: {VIDEO_PATH}")
+        print(f"Connecting to video stream/file: {VIDEO_PATH}")
         video = cv2.VideoCapture(VIDEO_PATH)
         
         if not video.isOpened():
