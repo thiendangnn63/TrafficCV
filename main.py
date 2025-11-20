@@ -6,18 +6,11 @@ import os
 import tkinter as tk
 from tkinter import ttk, filedialog # Import filedialog
 
-# --- MODEL CONFIGURATION ---
 MODEL_OPTIONS = {
-    "YOLOv10 Nano (Fastest)": "yolov10n.pt",
-    "YOLOv10 Small (Balanced)": "yolov10s.pt",
-    "YOLOv10 Medium (Accurate)": "yolov10m.pt",
-    "YOLOv10 Large (Most Accurate)": "yolov10l.pt"
+    "YOLO11 Semantic Segmentation": "yolo11n-seg.pt"
 }
-# Default model path if selection fails
-DEFAULT_MODEL_PATH = "yolov10n.pt" 
-# --- END MODEL CONFIGURATION ---
+DEFAULT_MODEL_PATH = "yolo11n-seg.pt" 
 
-# These variables are no longer global constants, they will be set by the GUI.
 # VIDEO_PATH = "test.mp4" 
 ROI_WINDOW_NAME = "Select Congestion Zone"
 
@@ -27,6 +20,24 @@ MAX_DISTANCE = 80
 roi_points = []
 display_frame = None
 original_frame = None
+
+def resize_video(frame, width=None, height=None):
+    if width is None and height is None:
+        return frame
+
+    (h, w) = frame.shape[:2]
+
+    if width is not None and height is not None:
+        dim = (width, height)
+    elif width is not None:
+        r = width / float(w)
+        dim = (width, int(h * r))
+    else:
+        r = height / float(h)
+        dim = (int(w * r), height)
+
+    resized = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
+    return resized
 
 def get_initial_setup_data():
     """Opens a Tkinter window to let the user select the model and video path."""
@@ -72,7 +83,7 @@ def get_initial_setup_data():
     root.resizable(False, False) # Prevent resizing
 
     # --- Model Selection Section ---
-    label_model = ttk.Label(root, text="1. Choose YOLOv10 Model:")
+    label_model = ttk.Label(root, text="1. Choose YOLOv11 Model:")
     label_model.pack(pady=5)
 
     model_combo = ttk.Combobox(root, values=list(MODEL_OPTIONS.keys()), state="readonly", width=45)
@@ -132,6 +143,8 @@ def mouse_callback(event, x, y, flags, param):
         else:
             print("Already 4 points selected. Press 'r' to reset.")
 
+# ... (Imports and other functions like get_initial_setup_data remain the same)
+
 def select_roi(first_frame):
     global roi_points, display_frame, original_frame
     
@@ -143,9 +156,11 @@ def select_roi(first_frame):
     original_frame = first_frame.copy()
     display_frame = first_frame.copy()
     
-    # --- Window Creation (Optimized for drawing) ---
+    # --- Window Creation (Modified) ---
     cv2.namedWindow(ROI_WINDOW_NAME, cv2.WINDOW_NORMAL) 
-    cv2.setWindowProperty(ROI_WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) 
+    
+    # DISABLED FULLSCREEN HERE
+    # cv2.setWindowProperty(ROI_WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN) 
     
     cv2.setMouseCallback(ROI_WINDOW_NAME, mouse_callback) 
     
@@ -153,11 +168,7 @@ def select_roi(first_frame):
     cv2.waitKey(1) 
 
     print("Please select 4 points for the congestion zone.")
-    print("Click to select a point.")
-    print("Press 'r' to reset points.")
-    print("Press 'c' to confirm (after 4 points).")
-    print("Press 'q' to quit.")
-
+    # ... (Rest of the function remains the same)
     while True:
         cv2.imshow(ROI_WINDOW_NAME, display_frame) 
         key = cv2.waitKey(33) & 0xFF 
@@ -181,16 +192,19 @@ def select_roi(first_frame):
 
 def main():
     
-    # 1. --- INITIAL SETUP (NEW) ---
+    # 1. --- INITIAL SETUP ---
     chosen_model_path, video_path_input = get_initial_setup_data()
     MODEL_PATH = chosen_model_path
     VIDEO_PATH = video_path_input
+
     print(f"Using model: {MODEL_PATH}")
     print(f"Source path: {VIDEO_PATH}")
-    # ---------------------------------
     
     image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
     is_image = False
+
+    # Note: This line in your original code was unused/incorrect, so we can ignore or remove it
+    # VIDEO = resize_video(VIDEO_PATH, width=800) 
     
     # Determine if input is a local image file
     if isinstance(VIDEO_PATH, str) and not VIDEO_PATH.startswith('http') and not VIDEO_PATH.startswith('rtsp'):
@@ -221,6 +235,12 @@ def main():
             video.release()
             return
     
+    # --- RESIZE STEP ADDED HERE ---
+    # Resize the first frame to 640x800 BEFORE selecting ROI
+    # This ensures your coordinate selection matches the processing loop later
+    first_frame = resize_video(first_frame, width=640, height=800)
+    # ------------------------------
+
     MAIN_WINDOW_NAME = "Traffic Congestion Analyzer"
 
     print("Frame grabbed. Please select ROI.")
@@ -235,7 +255,9 @@ def main():
 
     # Window Creation (Main Analysis Window)
     cv2.namedWindow(MAIN_WINDOW_NAME, cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty(MAIN_WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    
+    # DISABLED FULLSCREEN HERE
+    # cv2.setWindowProperty(MAIN_WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     analyzer = LaneAnalyzer(model_path=MODEL_PATH, roi_points=user_roi_points, max_disappeared=MAX_DISAPPEARED, max_distance=MAX_DISTANCE, conf_threshold=0.2)
     start_time = time.time()
@@ -252,6 +274,12 @@ def main():
             current_frame = None
         else:
             ret, current_frame = video.read()
+            
+            # --- RESIZE STEP ADDED HERE ---
+            # Resize every incoming frame to the same 640x800 resolution
+            if ret:
+                current_frame = resize_video(current_frame, width=640, height=800)
+            # ------------------------------
             
         if not ret:
             break
