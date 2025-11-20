@@ -54,12 +54,16 @@ class LaneAnalyzer:
                     y1_f = int(y1_c + y_min)
                     x2_f = int(x2_c + x_min)
                     y2_f = int(y2_c + y_min)
+                    cx = int((x1_f + x2_f) / 2)
+                    cy = int((y1_f + y2_f) / 2)
                     
                     b = (x1_f, y1_f, x2_f, y2_f)
-                    
-                    bbox_cropped.append(b)
-                    label.append(class_name)
-                    conf.append(confidence)
+                    if cv2.pointPolygonTest(self.areaext, (cx, cy), False) >= 0:
+                        b = (x1_f, y1_f, x2_f, y2_f)
+                        
+                        bbox_cropped.append(b)
+                        label.append(class_name)
+                        conf.append(confidence)
 
         # Update the 'large_vehicles' list for this frame using the full-frame coordinates
         self.bboxlab['large_vehicles'] = [bbox_cropped[i] for i, x in enumerate(label) if x in self.large_vehicle_labels]
